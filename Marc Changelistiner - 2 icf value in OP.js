@@ -45,6 +45,5 @@ function updateValue(value, opPage){
     customAttributes: {
       'cf.cplace.value': value
     }
-  }
-                             );
+  } );
 }

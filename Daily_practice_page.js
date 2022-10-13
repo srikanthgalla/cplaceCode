@@ -1,10 +1,8 @@
 /// <reference path="../../typeDefinitions/globals.d.ts" />
-
 /**
  * Description
  * @author 
  */
-
 //--------------------------------------------------------------------------------------//
 //                                       LOG AND DEBUG                                  //
 //--------------------------------------------------------------------------------------//
@@ -21,9 +19,9 @@ const DEBUG = true;
  * @type {Boolean}
  */
 
- const ENABLED = true;
+const ENABLED = true;
 
- /**
+/**
  * Get millisecond starting time of the script
  * @type {Number}
  */
@@ -36,12 +34,11 @@ let LAST_TIME = START_TIME;
 /**
  * Hint: set a declarative name for all of your logs
  */
- cplace.setLogName('pageaction-task-');
+cplace.setLogName('pageaction-copy-op-items');
 
 //--------------------------------------------------------------------------------------//
 //                                       CONFIGURATION                                  //
 //--------------------------------------------------------------------------------------//
-
 
 const ACTIONS = {
     CPLACE: 'CPLACE',
@@ -49,8 +46,8 @@ const ACTIONS = {
 
 const LABEL = {
     CPLACE: {
-        'de': 'TODO deutsche Aktion',
-        'en': 'TODO english Action',
+        'de': 'Copy OP Items',
+        'en': 'Copy OP Items',
     }
 }
 
@@ -58,68 +55,37 @@ const RESULT_MESSAGE = {
     CPLACE: {
         'de': 'Aktion erfolgreich ausgeführt',
         'en': 'Action successfull',
+    },
+    ERROR: {
+        'de': 'Es gibt keine aktiven Seiten, um diesen Vorgang auszuführen',
+        'en': 'There are no active pages to perform this operation'
     }
 }
 
 const ICON = {
-    CPLACE: 'cf-cplace'
+    CPLACE: 'fa-copy'
 }
-const VORBANF = {
-    TYPE: 'cf.cplace.fpfs.preBanfHead',
+
+const OP = {
+    TYPE: 'cf.cplace.fpfs.operationalPlanning',
     ATTR: {
-        RATING: 'cf.cplace.prm.kpi.forecastRating',
-        TITLE: 'cf.cplace.title',
-        ANTRAGSTELLER: 'cf.cplace.team',
-        INVOICE_RECEIVER: 'cf.cplace.invoiceReceiver',
-        ORDER_TYPE: 'cf.cplace.orderType',
-        STATUS: 'cf.cplace.status',
-        SUPPLIER: 'cf.cplace.supplier',
-        YEAR: 'cf.cplace.year',
-        BANF_PO_NR: 'cf.cplace.orderNumber',
-        REMARKS: 'cf.cplace.remarks',
-        VORBANF_ID: 'cf.cplace.identifier',
-        DEPARTMENT: 'cf.cplace.department',
-        CENTER: 'cf.cplace.center',
-        SUM_OF_VALUES: 'cf.cplace.sumOfValues',
+        OP_IFC_VALUE: 'cf.cplace.internalCapacityValue',
+        OP_INTERNAL_CAPACITY: 'cf.cplace.internalCapacity',
+        OP_INTERNAL_VALUE: 'cf.cplace.internalValue',
+        OP_BUDGET_TYPE: 'cf.cplace.budgetType',
+        OP_BUDGET_RELAVENT: 'cf.cplace.type',
+        OP_YEAR: 'cf.cplace.year'
+    }
+};
+
+const COPYOP = {
+    TYPE: 'cf.cplace.copyOP',
+    ATTR: {
+        COPYOP_FROM_YEAR: 'cf.cplace.copyOP.fromYear',
+        COPYOP_TO_YEAR: 'cf.cplace.copyOP.toYear'
     }
 }
 
-const ITEM = {
-    TYPE: 'cf.cplace.fpfs.purchaseRequisitionItem',
-    ATTR: {
-        VORBANF: 'cf.cplace.purchaseRequisitionHead',
-        ITEM_TEXT: 'cf.cplace.itemText',
-        ITEM_STATUS: 'cf.cplace.itemStatus',
-        CONTRACT_TYPE: 'cf.cplace.contractType',
-        PRICING: 'cf.cplace.pricing',
-        PLANNING_OBJECT: 'cf.cplace.planningObject',
-        AWARD_TYPE: 'cf.cplace.awardType',
-        VALID_FROM: 'cf.cplace.validFrom',
-        VALID_TO: 'cf.cplace.validTo',
-        ORDER_DAYS: 'cf.cplace.orderDays',
-        VALUE_IN_EURO: 'cf.cplace.value',
-        DEPARTMENT: 'cf.cplace.department',
-        ANTRAGSTELLER: 'cf.cplace.team',
-        CO_NR: 'cf.cplace.costObject',
-        OP: 'cf.cplace.operationalPlanning',
-        WBS_ELEMENT: 'cf.cplace.pspElement',
-        COST_CENTER: 'cf.cplace.costCenter',
-        PROJECT: 'cf.cplace.project',
-        COMMENT: 'cf.cplace.comment',
-        YEAR: 'cf.cplace.year',
-    }
-}
-
-const CHECKLIST = {
-    TYPE: 'cf.cplace.checklist',
-    ATTR: {
-        VORBANF: 'cf.cplace.vorBanf',
-        CHECKLIST_SET: 'cf.cplace.checklistSet',
-        CHECKLIST_ATTACHMENT: 'cf.cplace.checklistAttachment',
-        STATUS: 'cf.cplace.checklistStatus',
-        TEXT_DUMMY: 'cf.cplace.textDummy'
-    }
-}
 
 //--------------------------------------------------------------------------------------//
 //                                       INITIALIZATION                                 //
@@ -161,84 +127,116 @@ return {
                 message: e
             }
         }
-
     }
 }
-
 
 //--------------------------------------------------------------------------------------//
 //                                       BUSINESS FUNCTIONS                             //
 //--------------------------------------------------------------------------------------//
-
 
 /**
  * Return true if the action is allowed and visible
  * @param {Page} page 
  * @returns {Boolean}
  */
- function isActionAllowed(page) {
+function isActionAllowed(page) {
     /**
      * TODO Add your code here and return false if the action should not be visible and executable
      */
-    
     return true;
 }
-
 /**
- * Do the business action
- * 
- * @param {Page} page 
- * @returns {Object}
+ * Do the business function
+ * @param {Page} 
+ * @returns {Object}    
  */
 function doBusinessAction(page) {
     timeSinceStart('start')
-
     /**
-     * TODO Add your code here
+    	 1. Get all OP pages for the given year from OP type definition.
+         2. 
      */
+    const oPSearch = new Search();
+    oPSearch.add(Filters.type(OP.TYPE));
 
+    if (oPSearch.getHitCount() == 0) {
+        return {
+            success: false, // default is true
+            //job: jobId, //if your action starts a job and you want to show job modal
+            message: RESULT_MESSAGE.ERROR
+        }
+    }
 
-
-    timeSinceStart('final')
+    const opPageSet = oPSearch.findAllPages();
+    let year = null;
+    let copiedItems = [];
+    let copyOPFromYear = page.get(COPYOP.ATTR.COPYOP_FROM_YEAR);
+    let copyOPToYear = page.get(COPYOP.ATTR.COPYOP_TO_YEAR);
+    cplace.log('before loop');
+    cplace.each(opPageSet, (item) => {
+        year = item.get(OP.ATTR.OP_YEAR);
+        year = parseInt(year);
+        if (year == copyOPFromYear) {
+            cplace.log(year);
+            cplace.actions().copyPage(item, {
+                name: item.getName(),
+                space: item.getSpaceId(),
+            });
+            copiedItems.push(item);
+        }
+    });
+    let obj = {};
+    cplace.each(copiedItems, (copyItem) => {
+        obj[OP.ATTR.OP_YEAR] = copyOPToYear;
+        updatePage(copyItem, obj);
+    });
+    cplace.log("after loop");
+    timeSinceStart('final');
     return {
         success: true, // default is true
         //job: jobId, //if your action starts a job and you want to show job modal
         message: RESULT_MESSAGE[ACTION]
     }
 }
-
-
 /**
- * update page with attributes and refresh
+ * update page Function 
+ * Updating to Attributes 
  * @param {Page} page 
  * @param {Object} attributes
  * @returns {Page}
  */
- function updatePage(page, customAttributes) {
+function updatePage(page, customAttributes) {
+    cplace.log(page);
     let key = null;
     for (key in customAttributes) {
         if (customAttributes.hasOwnProperty(key)) {
             page.registerAttributeForRefresh(key)
         }
     }
-    return cplace.actions().updatePage(page, {
-        customAttributes: customAttributes,
-    }, {
-        setGeneratedName: true
+    let valid = cplace.actions().validateUpdatePage(page, {
+        customAttributes: customAttributes
     });
+    if (!valid) {
+        cplace.log('Cannot update page. Invalid object.')
+    } else {
+        return cplace.actions().updatePage(page, {
+            customAttributes: customAttributes,
+        }, {
+                setGeneratedName: true
+            }
+        );
+    }
 }
-
 
 //--------------------------------------------------------------------------------------//
 //                                       HELPER FUNCTIONS                               //
 //--------------------------------------------------------------------------------------//
 
-
 /**
  * Log to cplace
  * @param {any} text 
  */
- function log(text) {
+function log(text) {
     if (!DEBUG) {
         return
     }
@@ -246,7 +244,6 @@ function doBusinessAction(page) {
 
     cplace.log(logOutput);
 }
-
 
 function timeSinceStart(msg) {
     if (!DEBUG) {

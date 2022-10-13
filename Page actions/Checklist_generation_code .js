@@ -8,8 +8,6 @@
 3. If all the conditions are satisfied, then create a new page of the type "checklist".
 4. Go through all the checklists which are already created (check if they are still active or not).
 if the status of checklist is green, then it should not be removed.
-
- * 
  * 
  * @author 
  */
@@ -54,8 +52,8 @@ const ACTIONS = {
 
 const LABEL = {
     DEFAULT: {
-        'de': 'Update Checklists',
-        'en': 'Update Checklists',
+        'de': 'Checkliste aktualisieren',
+        'en': 'Update Checklist',
     }
 }
 
@@ -64,9 +62,13 @@ const RESULT_MESSAGE = {
         'de': 'Aktion erfolgreich ausgeführt',
         'en': 'Action successfull',
     },
-    ERROR: {
+    CHECKLIST_ERROR: {
         'de': 'There are no active checklists to perform Checklist Generation',
         'en': 'There are no active checklists to perform Checklist Generation'
+    },
+    BANF_ITEM_NOT_fOUND: {
+        'de': 'There are no Banf-Items found to perform this operation',
+        'en': 'There are no Banf-Items found to perform this operation'
     }
 }
 
@@ -154,6 +156,7 @@ const SUPPLIERS = {
         EK_OPTION: 'cf.cplace.ekAbschlussAvailable'
     }
 }
+
 //--------------------------------------------------------------------------------------//
 //                                       INITIALIZATION                                 //
 //--------------------------------------------------------------------------------------//
@@ -215,55 +218,66 @@ function isActionAllowed(page) {
  * Do the business action
  * 
  * @param {Page} vorbanf 
- * @returns {Object}
  */
 function doBusinessAction(vorbanf) {
     timeSinceStart('start')
     /**
-     * TODO Add your code here
+     * 1 Do a search for all active checklists. (under BUSINESS FUNCTIONS)
      */
-
-    /**
-  1. Do a search for all active checklists. (under BUSINESS FUNCTIONS)
-  */
     const checklistSearch = new Search();
-    checklistSearch.add(Filters.type(CHECKLIST_SET.TYPE))
-    checklistSearch.add(Filters.customAttribute(CHECKLIST_SET.ATTR.IS_ACTIVE).eq(true))
+    checklistSearch.add(Filters.type(CHECKLIST_SET.TYPE));
+    checklistSearch.add(Filters.customAttribute(CHECKLIST_SET.ATTR.IS_ACTIVE).eq(true));
 
     /**
-     *   Search.getHitCount() will return 0 if no active checklists found.
-     *   Will terminate the fucntion and show error if no active checklist found.
+     *   Search.getHitCount() will return 0 if no active checklist set data found.
+     *   Will terminate the fucntion and show error if no active checklist set data found.
      */
     if (checklistSearch.getHitCount() == 0) {
         return {
             success: false, // default is true
             //job: jobId, //if your action starts a job and you want to show job modal
-            message: RESULT_MESSAGE.ERROR
+            message: RESULT_MESSAGE.CHECKLIST_ERROR
         }
     }
-    // Search.findAllPages() will return all records which satisfies the given filter condition ( CHECKLIST_SET.ATTR.IS_ACTIVE should be true)
-    const checklistSets = checklistSearch.findAllPages();
 
     /**
-    Tracking all the existing Checklist records in already_generated_checklist.
-  */
+     * TODo a check if Banf-Items is == 0 Do not allow to generate checklist.And display message No Banf-Items found
+     */
+    const banfItemSearch = new Search();
+    banfItemSearch.add(Filters.type(ITEM.TYPE));
+    banfItemSearch.add(Filters.customAttribute(ITEM.ATTR.VORBANF).references(vorbanf));
+
+    if (banfItemSearch.getHitCount() == 0) {
+        cplace.log("No More Banf Items");
+        return {
+            success: false, // default is true
+            //job: jobId, //if your action starts a job and you want to show job modal
+            message: RESULT_MESSAGE.BANF_ITEM_NOT_fOUND
+        }
+    }
+
+    /**
+     * Tracking all the existing Checklist records in already_generated_checklist.
+     */
     let all_generated_checklist = [];
     cplace.each(vorbanf.getIncomingPages(CHECKLIST.TYPE, CHECKLIST.ATTR.VORBANF), (item) => {
         //cplace.log(item.get(CHECKLIST.ATTR.CHECKLIST_SET).getName());
         all_generated_checklist.push(item);
-    })
+    });
 
     /*
     2. For each active checklist, check if the rules match.
     */
+   const checklistSets = checklistSearch.findAllPages();
     cplace.each(checklistSets, (checklistSet) => {
-
+        cplace.log(checklistSet);
         /**
         TODO  Check if active checklist is match with already generated checklist record.
         If match found then storing the existing record in existingChecklist variable 
         */
         let existingChecklist = null;
         cplace.each(all_generated_checklist, (item) => {
+            // cplace.log(checklistSet.getId() + "  " + item.get(CHECKLIST.ATTR.CHECKLIST_SET).getId());
             if (checklistSet.getId() == item.get(CHECKLIST.ATTR.CHECKLIST_SET).getId()) {
                 existingChecklist = item;
             }
@@ -271,28 +285,19 @@ function doBusinessAction(vorbanf) {
         /**
          * Start of rule set validation.
          */
-
         /**
          * RULE_ORDER_TYPE: 'cf.cplace.orderType',
          */
+        cplace.log(checklistSet + ' rule for order Type');
         const ruleOrderType = vorbanf.get(VORBANF.ATTR.ORDER_TYPE);
         let isOrderTypeMatched = false;
         const verifyOrderType = checklistSet.get(CHECKLIST_SET.ATTR.ORDER_TYPE);
-        if (verifyOrderType && verifyOrderType.length > 0) 
-        {
-            /**
-             * TODO Match Pre_Requisiton's order type with each orderType of active checklist
-             * If found a match then proceed for the next Rule else Proceed for the next Ruleset.
-             */
-            cplace.each(verifyOrderType, (item) => {
-                if (!isOrderTypeMatched && item == ruleOrderType) {
-                    isOrderTypeMatched = true;
-                }
-            });
-        }else{
-            cplace.log("RULE_ORDER_TYPE not performed successfuly");
-        }
-
+        cplace.each(verifyOrderType, (item) => {
+            if (!isOrderTypeMatched && item == ruleOrderType) {
+                isOrderTypeMatched = true;
+                return false;
+            }
+        });
         /**
          * TODO If no match found For Ordre Type Rule then Delete checklist record if already exists otherwise proceed with next Ruleset.
          */
@@ -300,79 +305,55 @@ function doBusinessAction(vorbanf) {
             deleteExistingChecklsit(vorbanf, existingChecklist);
             return;
         }
-
         /**
-         * RULE_EK_OPTION_TYPE: 'cf.cplace.ekAbschlussAvailable
+         *  RULE_EK_OPTION_TYPE: 'cf.cplace.ekAbschlussAvailable
+         * TODO get vorbanf Supplier id
+         * TODO Getting Supplier Id from Supplier Type which matches Pre-Purchase Requisition's Supplier Id 
          */
-
-        /**
-         * TODO get vorbanf Supplier Name
-         */
-        let vorbanf_supplier = vorbanf.get(VORBANF.ATTR.SUPPLIER);
-        let vorbanf_supplier_name = vorbanf_supplier.getName();
-        
-
-        /**
-         * TODO Extracting Supplier Name and Supplier Number from vorbanf_supplier_name using '-' character (according to name generation pattern).
-         * If found a match then proceed for the next Rule else Proceed for the next Ruleset.
-         */
-        if (vorbanf_supplier_name && vorbanf_supplier_name.indexOf('-') > 0 && vorbanf_supplier_name.substr(vorbanf_supplier_name.indexOf('-') + 1) &&
-            vorbanf_supplier_name.substr(0, vorbanf_supplier_name.indexOf('-'))) {
-
-            /**
-            * TODO get Supplier Values from Supplier Type which matches Pre-Purchase Requisition's Supplier Name
-            */
+        cplace.log(checklistSet + ' rule for Ek Type');
+        cplace.log(checklistSet.getName());
+        if (checklistSet.getName() == "BENA" || checklistSet.getName() == "Skill-Beschreibung") {
+            let vorbanf_supplier_Id = vorbanf.get(VORBANF.ATTR.SUPPLIER).getId();
             var suppliers = new Search();
             suppliers.add(Filters.type(SUPPLIERS.TYPE));
+            let supplier_ek_option = null;
+            const EkPages = suppliers.findAllPages();
+            cplace.each(EkPages, (item) => {
+                if (item.getId() == vorbanf_supplier_Id) {
+
+                    supplier_ek_option = item.get(SUPPLIERS.ATTR.EK_OPTION);
+                    return false;
+                }
+            });
+            const verifyEKType = checklistSet.get(CHECKLIST_SET.ATTR.EK_OPTION);
             /**
-             * 
+             * TODO Deleting checklist if Ek-option is not matched
              */
-            suppliers.add(Filters.customAttribute(SUPPLIERS.ATTR.SUPPLIER_NUMBER).eq(vorbanf_supplier_name.substr(0, vorbanf_supplier_name.indexOf('-'))));
-            suppliers.add(Filters.customAttribute(SUPPLIERS.ATTR.VORBANF_SUPPLIER).eq(vorbanf_supplier_name.substr(vorbanf_supplier_name.indexOf('-') + 1)));
-            cplace.log('supplier search added ');
-            /**
-             * Search should return exactly one record. check, Supplier hit count and if not eqal to 1 delete checlist 
-             */
-            if (suppliers.getHitCount() != 1) {
-                cplace.log('checking and delete suppliers hit count not eqal to 0 in suppliers search ');
+            cplace.log("Verify EK : " + verifyEKType);
+            cplace.log("Supplier Ek: " + supplier_ek_option);
+
+            if (supplier_ek_option != verifyEKType) {
                 deleteExistingChecklsit(vorbanf, existingChecklist);
                 return;
             }
-        } else {
-            cplace.log('supplie name and supplier numbers are not in correct format :: supplier =' + vorbanf_supplier_name)
-        }
-
-        /**
-         * TODO Getting all supplier EK_options from All supplers.
-         * 
-         */
-        let supplier_ek_option = false;
-        const EkPages = suppliers.findAllPages();
-        cplace.each(EkPages, (item) => {
-            supplier_ek_option = item.get(SUPPLIERS.ATTR.EK_OPTION);
-        });
-
-        const verifyEKType = checklistSet.get(CHECKLIST_SET.ATTR.EK_OPTION);
-        /**
-         * TODO Deleting checklist if orderType is not matched
-         */
-        if (supplier_ek_option != verifyEKType) {
-            deleteExistingChecklsit(vorbanf, existingChecklist);
-            return;
         }
 
         /**
          * RULE_CONTRACT_TYPE: 'cf.cplace.checklistContractType',
          * TODO for each Contract Type, Check contract Type rule.  
          */
+        cplace.log(checklistSet + ' rule for contract Type');
         let isContractTypeMatched = false;
         cplace.each(vorbanf.getIncomingPages(ITEM.TYPE, ITEM.ATTR.VORBANF), (item) => {
+            if (isContractTypeMatched)
+                return;
             let ruleContractType = item.get(ITEM.ATTR.CONTRACT_TYPE);
             const verifyContractType = checklistSet.get(CHECKLIST_SET.ATTR.CONTRACT_TYPE);
-            if (verifyContractType && verifyContractType.length > 0) {
+            if (verifyContractType) {
                 cplace.each(verifyContractType, (item) => {
                     if (!isContractTypeMatched && item == ruleContractType) {
                         isContractTypeMatched = true;
+                        return;
                     }
                 });
             }
@@ -382,15 +363,15 @@ function doBusinessAction(vorbanf) {
             deleteExistingChecklsit(vorbanf, existingChecklist);
             return;
         }
-
         /**
           RULE_AWARD_TYPE: 'cf.cplace.cf.cplace.checklistAwardType'
         */
+        cplace.log(checklistSet + ' rule for award Type');
         let isAwaedTypeMatched = false;
         cplace.each(vorbanf.getIncomingPages(ITEM.TYPE, ITEM.ATTR.VORBANF), (item) => {
             let ruleAwardType = item.get(ITEM.ATTR.AWARD_TYPE);
             const verifyAwardType = checklistSet.get(CHECKLIST_SET.ATTR.AWARD_TYPE);
-            if (verifyAwardType && verifyAwardType.length > 0) {
+            if (verifyAwardType) {
                 cplace.each(verifyAwardType, (item) => {
                     if (!isAwaedTypeMatched && item == ruleAwardType) {
                         isAwaedTypeMatched = true;
@@ -403,21 +384,20 @@ function doBusinessAction(vorbanf) {
             deleteExistingChecklsit(vorbanf, existingChecklist);
             return;
         }
-
         /**
           RULE_MIN_ORDER_VALUE: 'cf.cplace.ruleMinimumOrderValue',
         */
-
+        cplace.log(checklistSet + ' rule for sumof values Type');
         const ruleMinOrderValue = checklistSet.get(CHECKLIST_SET.ATTR.RULE_MIN_ORDER_VALUE);
         const sumOfValues = vorbanf.get(VORBANF.ATTR.SUM_OF_VALUES);
         if (sumOfValues < ruleMinOrderValue) {
             deleteExistingChecklsit(vorbanf, existingChecklist);
             return;
         }
-
         /**
             RULE_MIN_DAYS: 'cf.cplace.ruleMinimumOrderDays',
         */
+        cplace.log(checklistSet + ' rule for min days Type');
         const ruleMinDays = checklistSet.get(CHECKLIST_SET.ATTR.RULE_MIN_DAYS);
         let minDaysOfItems = 99999;
 
@@ -425,23 +405,21 @@ function doBusinessAction(vorbanf) {
          loop through all items of the vorbanf and get the lowest number of Days for reference.
         */
         cplace.each(vorbanf.getIncomingPages(ITEM.TYPE, ITEM.ATTR.VORBANF), (item) => {
-            const days = item.get(ITEM.ATTR.ORDER_DAYS)
+            const days = item.get(ITEM.ATTR.ORDER_DAYS);
             if (days < minDaysOfItems) {
                 minDaysOfItems = days;
             }
-        })
+        });
+
         if (minDaysOfItems < ruleMinDays) {
             deleteExistingChecklsit(vorbanf, existingChecklist);
             return;
         }
-
         /**
-            TODO Add all other rules here !!!
-         */
-
-        /**
-        3. If all the conditions are satisfied, then create a new page of the type "checklist".
+         * TODO Add all other rules here !!!
+        3. If all the conditions are satisfied, then "checklist" will generate.
         */
+
         let checklistAttributes = {}
         /*
             VORBANF: 'cf.cplace.vorBanf',
@@ -453,30 +431,35 @@ function doBusinessAction(vorbanf) {
         checklistAttributes[CHECKLIST.ATTR.VORBANF] = vorbanf;
         checklistAttributes[CHECKLIST.ATTR.CHECKLIST_SET] = checklistSet;
         checklistAttributes[CHECKLIST.ATTR.CHECKLIST_GENERATION_DATE] = generationDate;
-
         /**
         If the entry exists and again passes the rules then we are updating the existing page with new generation date. 
         If the entry not exists alreadyss and passes the rules then we are inserting a new record
         */
+        // status is used to updated while updating old checklist status.
         if (existingChecklist == null) {
+            cplace.log(checklistSet + ' generation');
             cplace.actions().createPage({
                 name: checklistSet.getName(),
                 space: vorbanf.getSpaceId(),
                 customType: CHECKLIST.TYPE,
                 customAttributes: checklistAttributes
-            })
+            });
         } else {
+            cplace.log(checklistSet + ' Updation');
+            // let attachments = existingChecklist.getBuiltinFeatureValue('documents');
+            let attachments = existingChecklist.get(CHECKLIST.ATTR.CHECKLIST_ATTACHMENT);
+            cplace.log(attachments + " aaaaaaaaaaaa")
             cplace.actions().updatePage(existingChecklist, {
                 customAttributes: {
+                    // [CHECKLIST.ATTR.STATUS]: (attachments === null || attachments.size() == 0 || attachments.length == 0) ? "Red" : "Yellow",
+                    ['cf.cplace.checklistStatus']: (attachments === null || attachments.size() == 0 || attachments.length == 0) ? 'Red' : 'Yellow',
+                    ['cf.cplace.confirmation']: false,
                     [CHECKLIST.ATTR.CHECKLIST_GENERATION_DATE]: generationDate
                 }
-            })
+            });
         }
-    })
-    /*
-    4. Go through all the checklists which are already created (check if they are still active or not).
-    if the status of checklist is green, then it should not be removed.
-    */
+    }); // checklist end
+
     timeSinceStart('final')
     return {
         success: true, // default is true
@@ -484,7 +467,6 @@ function doBusinessAction(vorbanf) {
         message: RESULT_MESSAGE[ACTION]
     }
 }
-
 /**
  * @param {current page} vorbanf 
  * @param {it will have value of existingChecklist obj if it is already exists in pre-Requisition checklist else it is null} existingChecklist 
@@ -492,7 +474,7 @@ function doBusinessAction(vorbanf) {
 function deleteExistingChecklsit(vorbanf, existingChecklist) {
     if (existingChecklist != null) {
         cplace.each(vorbanf.getIncomingPages(CHECKLIST.TYPE, CHECKLIST.ATTR.VORBANF), (item) => {
-            if (item.get(CHECKLIST.ATTR.CHECKLIST_SET).getName() == existingChecklist.get(CHECKLIST.ATTR.CHECKLIST_SET).getName()) {
+            if (item.get(CHECKLIST.ATTR.CHECKLIST_SET).getId() == existingChecklist.get(CHECKLIST.ATTR.CHECKLIST_SET).getId()) {
                 cplace.actions().deletePage(item);
             }
         });
@@ -502,7 +484,6 @@ function deleteExistingChecklsit(vorbanf, existingChecklist) {
 //--------------------------------------------------------------------------------------//
 //                                       HELPER FUNCTIONS                               //
 //--------------------------------------------------------------------------------------//
-
 /**
  * Log to cplace
  * @param {any} text 

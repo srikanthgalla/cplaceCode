@@ -8,7 +8,6 @@ const OP = {
         OP_DEPARTMENT: 'cf.cplace.opDepartment',
         OP_YEAR: 'cf.cplace.year',
         INTERNAL_COST_FACTOR_VALUE: 'cf.cplace.internalCapacityValue',
-        IFC_VALUE: 'cf.cplace.ifcValue',
         INTERNAL_COST_FACTOR:'cf.cplace.costFactor'
     }
   }
@@ -43,7 +42,7 @@ const OP = {
   });
   if(!isValid){
     cplace.log("not found");
-    messages.get('invalid', department);
+   return messages.get('invalid', department,year);
   }
 
   let obj = {};
