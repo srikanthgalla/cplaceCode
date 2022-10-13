@@ -1,0 +1,129 @@
+
+Operational Planning
+ Change Listeners
+ 
+
+Name	Attributes	Origin	Action
+updateICFValue
+(Update ICF)
+Year
+Department
+cf.cplace.fpfs	
+
+
+updateKappaValue
+(Update Kappa Value)
+Type
+Internal Cost Factor Value
+Internal Capacity
+Budget Type
+cf.cplace.fpfs	
+
+
+updateAwardType
+(Update Award Type)
+Type
+Award Type
+cf.cplace.fpfs	
+
+
+* Scripts deployed from other Apps can be overwritten by the Apps
+ Page actions
+ 
+
+No page actions have beed added yet
+ Messages
+ Edit language of localized text attributes
+powered by collaboration Factory    |    Feedback
+×
+ESC
+Edit change listener Update Kappa Value
+Identifier * 
+updateKappaValue
+Name
+Deutsch	
+Kappa-Wert aktualisieren
+English	
+Update Kappa Value
+Attributes *
+CenterItem Position NameDepartmentYearTeamTeam DepartmentBudget TypeInternal Cost FactorInternal Cost Factor ValueTopicTypeAward TypeCost ObjectSystem/ProjectServiceCost CenterPossible SupplierPortfolioProduct ClusterInternal CapacityExternal valueIncomeShiftsInternal valueCommentVPAC
+Script
+Script
+Description
+const OP = {
+  TYPE: 'cf.cplace.fpfs.operationalPlanning',
+  ATTR: {
+​
+    OP_IFC_VALUE: 'cf.cplace.internalCapacityValue',
+    OP_INTERNAL_CAPACITY: 'cf.cplace.internalCapacity',
+    OP_INTERNAL_VALUE: 'cf.cplace.internalValue',
+    OP_BUDGET_TYPE: 'cf.cplace.budgetType',
+    OP_BUDGET_RELAVENT: 'cf.cplace.type',
+    OP_EXTERNAL_VALUE: 'cf.cplace.ext.Value',
+    OP_SHIFTS: 'cf.cplace.shift',
+    OP_INCOME: 'cf.cplace.incomeValue'
+  }
+};
+​
+var page = changeEvent.getEntity();
+​
+let ifcValue = page.get(OP.ATTR.OP_IFC_VALUE);
+let internal_Capacity = page.get(OP.ATTR.OP_INTERNAL_CAPACITY);
+let internal_Value = page.get(OP.ATTR.OP_INTERNAL_VALUE);
+let budget_Type = page.get(OP.ATTR.OP_BUDGET_TYPE);
+let budget_Relavent = page.get(OP.ATTR.OP_BUDGET_RELAVENT);
+let extrenal_value = page.get(OP.ATTR.OP_EXTERNAL_VALUE);
+let shifts = page.get(OP.ATTR.OP_SHIFTS);
+let income = page.get(OP.ATTR.OP_INCOME);
+let opAttributes = {};
+​
+/*let case1 = (budget_Type == 'int.' && budget_Relavent == 'Budget Relevant') ? true : false;
+let case2 = (budget_Type == 'int.' && budget_Relavent == 'Invest') ? true : false;
+let case3 = (budget_Type == 'int.' && budget_Relavent == 'Shift') ? true : false;
+let case4 = (budget_Type == 'ext.' && budget_Relavent == 'Budget Relevant') ? true : false;
+let case5 = (budget_Type == 'ext.' && budget_Relavent == 'Invest') ? true : false;
+let case6 = (budget_Type == 'ext.' && budget_Relavent == 'Shift') ? true : false;
+let case7 = (budget_Type == 'income' && budget_Relavent == 'Budget Relevant') ? true : false;
+let case8 = (budget_Type == 'income' && budget_Relavent == 'Invest') ? true : false;
+let case9 = (budget_Type == 'income' && budget_Relavent == 'Shift') ? true : false;*/
+​
+let case1 = (budget_Type == 'int.' && budget_Relavent == 'Budget Relevant');
+let case2 = (budget_Type == 'int.' && budget_Relavent == 'Invest');
+let case3 = (budget_Type == 'int.' && budget_Relavent == 'Shift');
+let case4 = (budget_Type == 'ext.' && budget_Relavent == 'Budget Relevant');
+let case5 = (budget_Type == 'ext.' && budget_Relavent == 'Invest');
+let case6 = (budget_Type == 'ext.' && budget_Relavent == 'Shift');
+let case7 = (budget_Type == 'income' && budget_Relavent == 'Budget Relevant');
+let case8 = (budget_Type == 'income' && budget_Relavent == 'Invest');
+let case9 = (budget_Type == 'income' && budget_Relavent == 'Shift');
+​
+internal_Value = ifcValue * internal_Capacity;
+cplace.log('result: ' + ifcValue + ' * ' + internal_Capacity + ' = ' + internal_Value);
+​
+/**
+ * checking all conditions  
+ */
+​
+if (case1) {
+  // assigning attribute values to opAttributes object.
+  opAttributes[OP.ATTR.OP_INTERNAL_CAPACITY] = internal_Capacity;
+  opAttributes[OP.ATTR.OP_INTERNAL_VALUE] = internal_Value;
+  opAttributes[OP.ATTR.OP_EXTERNAL_VALUE] = null;
+  opAttributes[OP.ATTR.OP_SHIFTS] = null;
+  opAttributes[OP.ATTR.OP_INCOME] = null;
+  // updating "cf.cplace.internalValue" attribute value
+/*  if (ifcValue && internal_Capacity) {
+    opAttributes[OP.ATTR.OP_INTERNAL_VALUE] = internal_Value;
+    updateAllData(page, opAttributes);
+    //updateInternalValue(page, internal_Value);
+  } else {
+    opAttributes[OP.ATTR.OP_INTERNAL_VALUE] = internal_Value;
+    updateAllData(page, opAttributes);
+    // updateInternalValue(page, internal_Value);
+  }
+  // Invoking updateAllData function.*/
+  updateAllData(page, opAttributes);
+​
+} else if (case2 || case3 || case8) {
+Contextual Help
+ 
